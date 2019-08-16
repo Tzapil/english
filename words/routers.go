@@ -18,18 +18,75 @@ import (
 
 // CollectionsRegister registrates common routers
 func WordsRegister(router *gin.RouterGroup) {
+	router.POST("/word", WordCreate)
+	router.GET("/word/:id", WordRetrieve)
+	router.GET("/words/random", RandomWordRetrieve)
+	router.PUT("/word/:id", WordUpdate)
 	router.GET("/collection/:id/words", WordsRetrieve)
+	router.GET("/collection/:id/words/random", RandomCollectionWordRetrieve)
+	router.DELETE("/word/:id", CollectionDelete)
 }
 
-// CollectionRegister registrates common routers
-func WordRegister(router *gin.RouterGroup) {
-	router.POST("/word", WordCreate)
-	router.GET("/collection/:id/word/random", RandomWordRetrieve)
-	router.GET("/word/:id", WordRetrieve)
-	router.PUT("/word/:id", WordUpdate)
+func CollectionDelete(c *gin.Context) {
+	name, errID := primitive.ObjectIDFromHex(c.Param("id"))
+
+	if errID != nil {
+		log.Println(errID)
+		c.JSON(http.StatusNotFound, common.NewError("collections", errors.New("Invalid param")))
+		return
+	}
+
+	client := common.GetDB()
+	collection := client.Database("english").Collection("collections")
+
+	var result Word
+
+	filter := bson.D{{"_id", name}}
+	err := collection.FindOneAndDelete(context.TODO(), filter).Decode(&result)
+
+	if err != nil {
+		log.Println(err)
+		c.JSON(http.StatusNotFound, common.NewError("collections", errors.New("Invalid param")))
+		return
+	}
+
+	c.JSON(http.StatusNoContent, gin.H{"collection": result})
 }
 
 func RandomWordRetrieve(c *gin.Context) {
+	client := common.GetDB()
+	collection := client.Database("english").Collection("words")
+
+	count, err := collection.CountDocuments(context.TODO(), bson.D{{}})
+
+	if err != nil {
+		log.Println(err)
+		c.JSON(http.StatusNotFound, common.NewError("words", errors.New("Invalid param")))
+		return
+	}
+
+	if count == 0 {
+		c.JSON(http.StatusBadRequest, common.NewError("words", errors.New("Empty collection")))
+		return
+	}
+
+	var result Word
+
+	findOptions := options.FindOne()
+	findOptions.SetSkip(rand.Int63n(count))
+
+	errR := collection.FindOne(context.TODO(), bson.D{{}}, findOptions).Decode(&result)
+
+	if errR != nil {
+		log.Println(errR)
+		c.JSON(http.StatusNotFound, common.NewError("words", errors.New("Invalid param")))
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"word": result})
+}
+
+func RandomCollectionWordRetrieve(c *gin.Context) {
 	name, errID := primitive.ObjectIDFromHex(c.Param("id"))
 
 	if errID != nil {
@@ -203,6 +260,8 @@ func WordCreate(c *gin.Context) {
 	c.BindJSON(&newWord)
 	newWord.Date = time.Now()
 
+	// 422 validation
+
 	insertResult, err := collection.InsertOne(context.TODO(), newWord)
 	if err != nil {
 		c.JSON(http.StatusNotFound, common.NewError("words", errors.New("Invalid param")))
@@ -210,5 +269,5 @@ func WordCreate(c *gin.Context) {
 	}
 
 	// insertResult -> {InsertedID: "abbababababbabab"}
-	c.JSON(http.StatusOK, gin.H{"collection": insertResult})
+	c.JSON(http.StatusCreated, gin.H{"collection": insertResult})
 }

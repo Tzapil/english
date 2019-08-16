@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"math/rand"
 	"net/http"
 	"strconv"
 	"time"
@@ -18,14 +19,69 @@ import (
 // CollectionsRegister registrates common routers
 func CollectionsRegister(router *gin.RouterGroup) {
 	router.GET("/collections", CollectionsRetrieve)
-	// router.GET("/collections/count", CollectionsRetrieve)
-}
-
-// CollectionRegister registrates common routers
-func CollectionRegister(router *gin.RouterGroup) {
+	router.GET("/collections/random", RandomCollectionRetrieve)
 	router.POST("/collection", CollectionCreate)
 	router.GET("/collection/:id", CollectionRetrieve)
 	router.PUT("/collection/:id", CollectionUpdate)
+	router.DELETE("/collection/:id", CollectionDelete)
+}
+
+func CollectionDelete(c *gin.Context) {
+	name, errID := primitive.ObjectIDFromHex(c.Param("id"))
+
+	if errID != nil {
+		log.Println(errID)
+		c.JSON(http.StatusNotFound, common.NewError("collections", errors.New("Invalid param")))
+		return
+	}
+
+	client := common.GetDB()
+	collection := client.Database("english").Collection("collections")
+
+	var result Collection
+
+	filter := bson.D{{"_id", name}}
+	err := collection.FindOneAndDelete(context.TODO(), filter).Decode(&result)
+
+	if err != nil {
+		log.Println(err)
+		c.JSON(http.StatusNotFound, common.NewError("collections", errors.New("Invalid param")))
+		return
+	}
+
+	c.JSON(http.StatusNoContent, gin.H{"collection": result})
+}
+
+func RandomCollectionRetrieve(c *gin.Context) {
+	client := common.GetDB()
+	collection := client.Database("english").Collection("collections")
+	count, err := collection.CountDocuments(context.TODO(), bson.D{{}})
+
+	if err != nil {
+		log.Println(err)
+		c.JSON(http.StatusInternalServerError, common.NewError("collections", errors.New("Something goes wrong")))
+		return
+	}
+
+	if count == 0 {
+		c.JSON(http.StatusBadRequest, common.NewError("collections", errors.New("No collections")))
+		return
+	}
+
+	var result Collection
+
+	findOptions := options.FindOne()
+	findOptions.SetSkip(rand.Int63n(count))
+
+	errR := collection.FindOne(context.TODO(), bson.D{{}}, findOptions).Decode(&result)
+
+	if errR != nil {
+		log.Println(errR)
+		c.JSON(http.StatusInternalServerError, common.NewError("collections", errors.New("Something goes wrong")))
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"collection": result})
 }
 
 func CollectionsRetrieve(c *gin.Context) {
@@ -159,6 +215,5 @@ func CollectionCreate(c *gin.Context) {
 		return
 	}
 
-	// insertResult -> {InsertedID: "abbababababbabab"}
-	c.JSON(http.StatusOK, gin.H{"collection": insertResult})
+	c.JSON(http.StatusCreated, gin.H{"collection": insertResult})
 }

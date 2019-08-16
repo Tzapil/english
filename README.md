@@ -25,7 +25,7 @@
 <collection>
 ```
 
-### GET `/collection/random`
+### GET `/collections/random`
 Получить случайную коллекцию.
 
 #### Response
@@ -86,7 +86,7 @@
 }
 ```
 
-### GET `/collection/{collection_id}/word/{word_id}`
+### GET `/word/{word_id}`
 Получить слово из коллекции по id.
 
 #### Response
@@ -96,7 +96,7 @@
 <word>
 ```
 
-### GET `/collection/{collection_id}/word/random`
+### GET `/collection/{collection_id}/words/random`
 Получить случайное слово из коллекции.
 
 #### Response
@@ -106,7 +106,17 @@
 <word>
 ```
 
-### POST `/collection/{collection_id}/word`
+### GET `/words/random`
+Получить случайное слово из коллекции.
+
+#### Response
+`200 OK`
+
+```
+<word>
+```
+
+### POST `/word`
 Добавить новое слово в коллекцию.
 
 #### Request
@@ -124,7 +134,7 @@
 <word>
 ```
 
-### PUT `/collection/{collection_id}/word/{word_id}`
+### PUT `/word/{word_id}`
 Обновить слово из коллекции по id.
 
 #### Request
@@ -142,7 +152,7 @@
 <word>
 ```
 
-### DELETE `/collection/{collection_id}/word/{word_id}`
+### DELETE `/word/{word_id}`
 Удалить слово из коллекции.
 
 #### Response
@@ -151,7 +161,7 @@
 ## Words
 
 ### GET `/words`
-Получить список слов из всех коллекций.
+Получить список слов из всех слов.
 
 #### Response
 `200 OK`

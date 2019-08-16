@@ -93,12 +93,8 @@ func serve() {
 	// make all handlers v1 api version
 	v1 := r.Group("/api/v1")
 
-	collections.CollectionRegister(v1)
 	collections.CollectionsRegister(v1)
-
 	words.WordsRegister(v1)
-	words.WordRegister(v1)
-
 	ping.PingRegister(v1)
 
 	// run default listen and serve on 0.0.0.0:8080
